@@ -11,17 +11,11 @@ namespace ImageDownloader
 {
     class ImageDownloader
     {
-        public string URL { get; set; }
-        public string FolderPath { get; set; }
 
         public ImageDownloader() { }
-        public ImageDownloader(string url, string folderPath)
-        {
-            this.URL = url;
-            this.FolderPath = folderPath;
-        }
 
-        public void DownloadImagesFromUrl()
+
+        public void DownloadImagesFromUrl(string url, string folderPath)
         {
             bool validUrl = false;
             string htmlCode = null;
@@ -29,42 +23,46 @@ namespace ImageDownloader
             const string imgTagPattern = @"<img\b[^\<\>]+?\bsrc\s*=\s*[""'](?<SRC>.+?)[""'][^\<\>]*?\>";
 
             //ZH, if the url or folder path are not set, we will not be able to continue
-            if (this.URL == null || this.FolderPath == null)
+            if (url == null || folderPath == null)
             {
                 throw new ArgumentException("URL or Folder Path do not have a value.");
             }
 
             //ZH, check URL string formatting, should start with http or https
-            if (!this.URL.StartsWith("http://") && !this.URL.StartsWith("https://"))
+            if (!url.StartsWith("http://") && !url.StartsWith("https://"))
             {
-                this.URL = "http://" + this.URL;
+                url = "http://" + url;
             }
 
             //ZH, create folder if it doesn't already exist
-            if (!Directory.Exists(this.FolderPath))
+            if (!Directory.Exists(folderPath))
             {
-                Directory.CreateDirectory(this.FolderPath);
+                Directory.CreateDirectory(folderPath);
             }
 
             //ZH, Ouput File used for displaying error to users (this assume file exist)
-            StreamWriter outputFile = new StreamWriter(this.FolderPath + @"\_output.txt");
+            StreamWriter outputFile = new StreamWriter(folderPath + @"\_output.txt");
 
             //ZH, convert the URL into a URI object for easy access to the Host (Domain), Record any error that may occur.
-            try {
-                Uri myUri = new Uri(this.URL);
+            try
+            {
+
+                Uri myUri = new Uri(url);
                 host = "http://" + myUri.Host;
                 validUrl = true;
+
             } catch (System.UriFormatException e)
             {
-                outputFile.WriteLine("Invalid URL '" + this.URL + "' " + e.Message);
+                outputFile.WriteLine("Invalid URL '" + url + "' " + e.Message);
             }
 
             if (validUrl)
             {
                 using (WebClient client = new WebClient())
                 {
-                    try {
-                        htmlCode = client.DownloadString(this.URL);
+                    try
+                    {
+                        htmlCode = client.DownloadString(url);
                         validUrl = true;
 
                         //ZH, for each img tag in the html of the URL, validate and format it and download it to the folder location.
@@ -75,25 +73,9 @@ namespace ImageDownloader
                             {
                                 //ZH, get the file name (the string following the last '/' in the image path.
                                 string imageFileName = imagePath.Substring(imagePath.LastIndexOf('/'));
-                                string filePath = this.FolderPath + @"\" + imageFileName;
+                                string filePath = folderPath + @"\" + imageFileName;
 
-                                //ZH, Fix issue with Relative path (adding a / so that it can be converted into a absolute path)
-                                if (imagePath.StartsWith("../"))
-                                {
-                                    imagePath = "/" + imagePath;
-                                }
-
-                                //ZH, change relative protocol to absolute path
-                                if (imagePath.StartsWith("//"))
-                                {
-                                    imagePath = "http:" + imagePath;
-                                }
-
-                                //ZH, change relative path to absolute path
-                                if (!imagePath.StartsWith("http://") && !imagePath.StartsWith("https://"))
-                                {
-                                    imagePath = host + imagePath;
-                                }
+                                imagePath = MakePathAbsolute(imagePath, host);
 
                                 //ZH, Attempt to download each image, if there is a problem record it in the output file.
                                 try
@@ -123,6 +105,32 @@ namespace ImageDownloader
         {
             url = url.ToLower();
             return (url.EndsWith(".png") || url.EndsWith(".jpg") || url.EndsWith(".jpeg") || url.EndsWith(".gif") || url.EndsWith(".bmp"));
+        }
+
+        /**
+         * Given a path (relative or absolute) and a host name, modify path to make sure it is an absolute path.
+         */
+        private string MakePathAbsolute(string path, string host)
+        {
+            //ZH, Fix issue with Relative path (adding a / so that it can be converted into a absolute path)
+            if (path.StartsWith("../"))
+            {
+                path = "/" + path;
+            }
+
+            //ZH, change relative protocol to absolute path
+            if (path.StartsWith("//"))
+            {
+                path = "http:" + path;
+            }
+
+            //ZH, change relative path to absolute path
+            if (!path.StartsWith("http://") && !path.StartsWith("https://"))
+            {
+                path = host + path;
+            }
+
+            return path;
         }
     }
 }
