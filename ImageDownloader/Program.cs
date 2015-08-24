@@ -26,9 +26,7 @@ namespace ImageDownloader
                     string url = userParameters[0];
                     string saveTo = userParameters[1];
 
-                    imageDownloader.URL = url;
-                    imageDownloader.FolderPath = saveTo;
-                    imageDownloader.DownloadImagesFromUrl();
+                    imageDownloader.DownloadImagesFromUrl(url, saveTo);
 
                 } else
                 {
